@@ -1,0 +1,277 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <unordered_map>
+#include <iomanip>
+
+using namespace std;
+
+// ======== Kelas Studio ========
+class Studio {
+private:
+    string nama;
+    int nomorStudio;
+    bool tersedia;
+    double hargaPerJam;
+
+public:
+    Studio(string n, int nomor, double harga) 
+        : nama(n), nomorStudio(nomor), tersedia(true), hargaPerJam(harga) {}
+
+    string getNama() const { return nama; }
+    int getNomorStudio() const { return nomorStudio; }
+    bool isTersedia() const { return tersedia; }
+    double getHargaPerJam() const { return hargaPerJam; }
+
+    void setTersedia(bool status) { tersedia = status; }
+};
+
+// ======== Kelas Penyewaan ========
+class Penyewaan {
+private:
+    Studio* studioDisewa;
+    string namaPenyewa;
+    int durasi;
+    string tanggal;
+
+public:
+    Penyewaan(Studio* studio, string nama, int jam, string tgl)
+        : studioDisewa(studio), namaPenyewa(nama), durasi(jam), tanggal(tgl) {
+        studio->setTersedia(false);
+    }
+
+    double hitungTotalBiaya() const {
+        return studioDisewa->getHargaPerJam() * durasi;
+    }
+
+    Studio* getStudio() const { return studioDisewa; }
+    string getNamaPenyewa() const { return namaPenyewa; }
+    int getDurasi() const { return durasi; }
+    string getTanggal() const { return tanggal; }
+};
+
+// ======== Kelas Sistem Sewa ========
+class SistemSewa {
+private:
+    vector<Studio> daftarStudio;
+    vector<Penyewaan> riwayatSewa;
+
+public:
+    void tambahStudio(const string& nama, int nomor, double harga) {
+        daftarStudio.push_back(Studio(nama, nomor, harga));
+        cout << "Studio " << nama << " berhasil ditambahkan.\n";
+    }
+
+    void hapusStudio(int nomor) {
+        auto it = remove_if(daftarStudio.begin(), daftarStudio.end(), [nomor](Studio& studio) {
+            return studio.getNomorStudio() == nomor;
+        });
+        if (it != daftarStudio.end()) {
+            daftarStudio.erase(it, daftarStudio.end());
+            cout << "Studio nomor " << nomor << " berhasil dihapus.\n";
+        } else {
+            cout << "Studio tidak ditemukan.\n";
+        }
+    }
+
+    void tampilkanStudio(bool semua) const {
+        cout << "Daftar Studio " << (semua ? "(Semua)" : "(Tersedia)") << ":\n";
+        for (const auto& studio : daftarStudio) {
+            if (semua || studio.isTersedia()) {
+                cout << "Studio " << studio.getNomorStudio() 
+                     << " - " << studio.getNama() 
+                     << " (Rp " << fixed << setprecision(0) 
+                     << studio.getHargaPerJam() << "/jam)\n";
+            }
+        }
+    }
+
+    Studio* cariStudio(int nomor) {
+        for (auto& studio : daftarStudio) {
+            if (studio.getNomorStudio() == nomor) {
+                return &studio;
+            }
+        }
+        return nullptr;
+    }
+
+    void sewaStudio(Studio* studio, const string& namaPenyewa, int durasi, const string& tanggal) {
+        if (studio && studio->isTersedia()) {
+            riwayatSewa.push_back(Penyewaan(studio, namaPenyewa, durasi, tanggal));
+            cout << "Sewa berhasil! Total biaya: Rp " 
+                 << fixed << setprecision(0) 
+                 << riwayatSewa.back().hitungTotalBiaya() << endl;
+        } else {
+            cout << "Studio tidak tersedia!\n";
+        }
+    }
+
+    void tampilkanRiwayatSewa() const {
+        cout << "Riwayat Sewa Studio:\n";
+        for (const auto& sewa : riwayatSewa) {
+            cout << "Penyewa: " << sewa.getNamaPenyewa() 
+                 << " | Studio " << sewa.getStudio()->getNomorStudio() 
+                 << " | Tanggal: " << sewa.getTanggal() 
+                 << " | Durasi: " << sewa.getDurasi() << " jam\n";
+        }
+    }
+};
+
+// ======== Kelas Login ========
+class LoginSystem {
+private:
+    unordered_map<string, string> users; // {username: password}
+    string currentUser;
+
+public:
+    LoginSystem() {
+        users["admin"] = "admin123"; // Default admin
+    }
+
+    void registerUser() {
+        string username, password;
+        cout << "Masukkan username baru: ";
+        cin >> username;
+        if (users.find(username) != users.end()) {
+            cout << "Username sudah terdaftar!\n";
+            return;
+        }
+        cout << "Masukkan password: ";
+        cin >> password;
+        users[username] = password;
+        cout << "Registrasi berhasil!\n";
+    }
+
+    bool login() {
+        string username, password;
+        cout << "Username: ";
+        cin >> username;
+        cout << "Password: ";
+        cin >> password;
+
+        if (users.find(username) != users.end() && users[username] == password) {
+            currentUser = username;
+            cout << "Login berhasil! Selamat datang, " << username << ".\n";
+            return true;
+        }
+        cout << "Username atau password salah.\n";
+        return false;
+    }
+
+    bool isAdmin() const {
+        return currentUser == "admin";
+    }
+};
+
+// ======== Main Program ========
+int main() {
+    SistemSewa sistemSewa;
+    LoginSystem loginSystem;
+
+    sistemSewa.tambahStudio("Studio Musik", 1, 150000);
+    sistemSewa.tambahStudio("Studio Foto", 2, 200000);
+    sistemSewa.tambahStudio("Studio Podcast", 3, 100000);
+
+    int pilihan;
+    do {
+        cout << "\n--- MENU UTAMA ---\n";
+        cout << "1. Login\n";
+        cout << "2. Register\n";
+        cout << "3. Keluar\n";
+        cout << "Pilihan: ";
+        cin >> pilihan;
+
+        if (pilihan == 1 && loginSystem.login()) {
+            if (loginSystem.isAdmin()) {
+                int adminChoice;
+                do {
+                    cout << "\n--- MENU ADMIN ---\n";
+                    cout << "1. Tambah Studio\n";
+                    cout << "2. Hapus Studio\n";
+                    cout << "3. Lihat Semua Studio\n";
+                    cout << "4. Logout\n";
+                    cout << "Pilihan: ";
+                    cin >> adminChoice;
+
+                    switch (adminChoice) {
+                        case 1: {
+                            string nama;
+                            int nomor;
+                            double harga;
+                            cout << "Nama Studio: ";
+                            cin >> nama;
+                            cout << "Nomor Studio: ";
+                            cin >> nomor;
+                            cout << "Harga per Jam: ";
+                            cin >> harga;
+                            sistemSewa.tambahStudio(nama, nomor, harga);
+                            break;
+                        }
+                        case 2: {
+                            int nomor;
+                            cout << "Nomor Studio yang ingin dihapus: ";
+                            cin >> nomor;
+                            sistemSewa.hapusStudio(nomor);
+                            break;
+                        }
+                        case 3:
+                            sistemSewa.tampilkanStudio(true);
+                            break;
+                        case 4:
+                            cout << "Logout berhasil.\n";
+                            break;
+                        default:
+                            cout << "Pilihan tidak valid.\n";
+                    }
+                } while (adminChoice != 4);
+            } else {
+                int userChoice;
+                do {
+                    cout << "\n--- MENU USER ---\n";
+                    cout << "1. Lihat Studio Tersedia\n";
+                    cout << "2. Sewa Studio\n";
+                    cout << "3. Riwayat Sewa\n";
+                    cout << "4. Logout\n";
+                    cout << "Pilihan: ";
+                    cin >> userChoice;
+
+                    switch (userChoice) {
+                        case 1:
+                            sistemSewa.tampilkanStudio(false);
+                            break;
+                        case 2: {
+                            int nomorStudio, durasi;
+                            string tanggal;
+                            sistemSewa.tampilkanStudio(false);
+                            cout << "Nomor Studio: ";
+                            cin >> nomorStudio;
+                            cout << "Durasi Sewa (jam): ";
+                            cin >> durasi;
+                            cin.ignore();
+                            cout << "Tanggal Sewa: ";
+                            getline(cin, tanggal);
+
+                            Studio* studio = sistemSewa.cariStudio(nomorStudio);
+                            sistemSewa.sewaStudio(studio, "User", durasi, tanggal);
+                            break;
+                        }
+                        case 3:
+                            sistemSewa.tampilkanRiwayatSewa();
+                            break;
+                        case 4:
+                            cout << "Logout berhasil.\n";
+                            break;
+                        default:
+                            cout << "Pilihan tidak valid.\n";
+                    }
+                } while (userChoice != 4);
+            }
+        } else if (pilihan == 2) {
+            loginSystem.registerUser();
+        }
+    } while (pilihan != 3);
+
+    cout << "Terima kasih telah menggunakan sistem sewa studio!\n";
+    return 0;
+}
